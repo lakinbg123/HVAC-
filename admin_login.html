@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Admin Login | {{ business_name }}{% endblock %}
+{% block content %}
+<section class="simple-page">
+  <div class="container narrow card center">
+    <h1>Admin Login</h1>
+    <form method="post" class="stack-form">
+      <label>Password
+        <input type="password" name="password" required>
+      </label>
+      <button class="btn btn-primary" type="submit">Login</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
