@@ -28,6 +28,17 @@ app.config['TWILIO_AUTH_TOKEN'] = os.environ.get('TWILIO_AUTH_TOKEN', '')
 app.config['TWILIO_PHONE_NUMBER'] = os.environ.get('TWILIO_PHONE_NUMBER', '')
 app.config['ALERT_PHONE_NUMBER'] = os.environ.get('ALERT_PHONE_NUMBER', '')
 
+def send_sms_alert(message):
+    client = Client(
+        app.config['TWILIO_ACCOUNT_SID'],
+        app.config['TWILIO_AUTH_TOKEN']
+    )
+
+    client.messages.create(
+        body=message,
+        from_=app.config['TWILIO_PHONE_NUMBER'],
+        to=app.config['ALERT_PHONE_NUMBER']
+    )
 
 def get_db() -> sqlite3.Connection:
     if 'db' not in g:
