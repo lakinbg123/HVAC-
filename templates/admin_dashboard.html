@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Lead Dashboard | {{ business_name }}{% endblock %}
+{% block content %}
+<section class="simple-page">
+  <div class="container wide card">
+    <div class="dashboard-head">
+      <div>
+        <h1>Lead Dashboard</h1>
+        <p class="small">Recent leads captured by the site.</p>
+      </div>
+      <div class="dashboard-actions">
+        <a class="btn btn-secondary" href="{{ url_for('export_csv') }}">Export CSV</a>
+        <a class="btn btn-secondary" href="{{ url_for('admin_logout') }}">Logout</a>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>City</th>
+            <th>Service</th>
+            <th>Urgency</th>
+            <th>Details</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in leads %}
+          <tr>
+            <td>{{ lead['created_at'] }}</td>
+            <td>{{ lead['name'] }}</td>
+            <td><a href="tel:{{ lead['phone'] }}">{{ lead['phone'] }}</a></td>
+            <td>{{ lead['city'] }}</td>
+            <td>{{ lead['service_type'] }}</td>
+            <td>{{ lead['urgency'] }}</td>
+            <td>{{ lead['details'] }}</td>
+            <td>
+              <form method="post" action="{{ url_for('update_status', lead_id=lead['id']) }}">
+                <select name="status" onchange="this.form.submit()">
+                  {% for option in ['new', 'contacted', 'booked', 'closed'] %}
+                  <option value="{{ option }}" {% if lead['status'] == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8">No leads yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}
