@@ -21,41 +21,25 @@ app.config['BUSINESS_NAME'] = os.environ.get('BUSINESS_NAME', 'Gulf Coast Same-D
 app.config['PHONE_DISPLAY'] = '228-365-7474'
 app.config['PHONE_TEL'] = '2283657474'
 app.config['SERVICE_AREA'] = 'Biloxi, Gulfport, D’Iberville & nearby Gulf Coast areas'
-app.config['CITY_LIST'] = ['Biloxi', 'Gulfport', 'D\'Iberville', 'Ocean Springs', 'St. Martin']
+app.config['CITY_LIST'] = ['Biloxi', 'Gulfport', "D'Iberville", 'Ocean Springs', 'St. Martin']
 
 app.config['TWILIO_ACCOUNT_SID'] = os.environ.get('TWILIO_ACCOUNT_SID', '')
 app.config['TWILIO_AUTH_TOKEN'] = os.environ.get('TWILIO_AUTH_TOKEN', '')
 app.config['TWILIO_PHONE_NUMBER'] = os.environ.get('TWILIO_PHONE_NUMBER', '')
 app.config['ALERT_PHONE_NUMBER'] = os.environ.get('ALERT_PHONE_NUMBER', '')
 
-def send_sms_alert(message):
+
+def send_sms_alert(message: str) -> None:
     client = Client(
         app.config['TWILIO_ACCOUNT_SID'],
         app.config['TWILIO_AUTH_TOKEN']
     )
-
     client.messages.create(
         body=message,
         from_=app.config['TWILIO_PHONE_NUMBER'],
         to=app.config['ALERT_PHONE_NUMBER']
     )
 
-sms_body = f"""
-NEW HVAC LEAD 🚨
-
-Name: {name}
-Phone: {phone}
-City: {city}
-Service: {service_type}
-Urgency: {urgency}
-Details: {details}
-"""
-
-try:
-    send_sms_alert(sms_body)
-    print("SMS sent successfully")
-except Exception as e:
-    print(f"SMS send failed: {e}")
 
 def get_db() -> sqlite3.Connection:
     if 'db' not in g:
@@ -95,23 +79,6 @@ def init_db() -> None:
 
 
 init_db()
-
-
-def send_sms_alert(message: str) -> None:
-    account_sid = app.config['TWILIO_ACCOUNT_SID']
-    auth_token = app.config['TWILIO_AUTH_TOKEN']
-    from_number = app.config['TWILIO_PHONE_NUMBER']
-    to_number = app.config['ALERT_PHONE_NUMBER']
-
-    if not all([account_sid, auth_token, from_number, to_number]):
-        raise RuntimeError('Missing Twilio environment variables.')
-
-    client = Client(account_sid, auth_token)
-    client.messages.create(
-        body=message,
-        from_=from_number,
-        to=to_number,
-    )
 
 
 def login_required(view_func):
@@ -157,10 +124,6 @@ def create_lead():
         flash('Name and phone are required.', 'error')
         return redirect(url_for('index'))
 
-    created_at = datetime.utcnow().isoformat(timespec='seconds') + 'Z'
-    source = request.form.get('source', 'website')
-    page_url = request.form.get('page_url', '/')
-
     db = get_db()
     db.execute(
         '''
@@ -168,34 +131,34 @@ def create_lead():
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
         (
-            created_at,
+            datetime.utcnow().isoformat(timespec='seconds') + 'Z',
             name,
             phone,
             city,
             service_type,
             urgency,
             details,
-            source,
-            page_url,
+            request.form.get('source', 'website'),
+            request.form.get('page_url', '/'),
         ),
     )
     db.commit()
 
     sms_body = (
-        f"NEW HVAC LEAD\n"
+        f"NEW HVAC LEAD 🚨\n\n"
         f"Name: {name}\n"
         f"Phone: {phone}\n"
-        f"City: {city or 'N/A'}\n"
-        f"Service: {service_type or 'N/A'}\n"
-        f"Urgency: {urgency or 'N/A'}\n"
-        f"Details: {details or 'N/A'}"
+        f"City: {city}\n"
+        f"Service: {service_type}\n"
+        f"Urgency: {urgency}\n"
+        f"Details: {details}"
     )
 
     try:
         send_sms_alert(sms_body)
+        print("SMS sent successfully")
     except Exception as e:
-        # Keep saving leads even if texting fails
-        print(f"SMS send failed: {e}")
+        print(f"SMS send failed: {repr(e)}")
 
     return redirect(url_for('thank_you', name=name))
 
@@ -265,3 +228,8 @@ def export_csv():
 @app.route('/admin/logout')
 def admin_logout():
     session.clear()
+    return redirect(url_for('admin_login'))
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
