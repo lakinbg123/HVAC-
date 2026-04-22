@@ -40,6 +40,23 @@ def send_sms_alert(message):
         to=app.config['ALERT_PHONE_NUMBER']
     )
 
+sms_body = f"""
+NEW HVAC LEAD 🚨
+
+Name: {name}
+Phone: {phone}
+City: {city}
+Service: {service_type}
+Urgency: {urgency}
+Details: {details}
+"""
+
+try:
+    send_sms_alert(sms_body)
+    print("SMS sent successfully")
+except Exception as e:
+    print(f"SMS send failed: {e}")
+
 def get_db() -> sqlite3.Connection:
     if 'db' not in g:
         g.db = sqlite3.connect(DB_PATH)
