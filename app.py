@@ -8,6 +8,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for, send_file
+from twilio.rest import Client
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / 'leads.db'
@@ -21,6 +22,11 @@ app.config['PHONE_DISPLAY'] = '228-365-7474'
 app.config['PHONE_TEL'] = '2283657474'
 app.config['SERVICE_AREA'] = 'Biloxi, Gulfport, D’Iberville & nearby Gulf Coast areas'
 app.config['CITY_LIST'] = ['Biloxi', 'Gulfport', 'D\'Iberville', 'Ocean Springs', 'St. Martin']
+
+app.config['TWILIO_ACCOUNT_SID'] = os.environ.get('TWILIO_ACCOUNT_SID', '')
+app.config['TWILIO_AUTH_TOKEN'] = os.environ.get('TWILIO_AUTH_TOKEN', '')
+app.config['TWILIO_PHONE_NUMBER'] = os.environ.get('TWILIO_PHONE_NUMBER', '')
+app.config['ALERT_PHONE_NUMBER'] = os.environ.get('ALERT_PHONE_NUMBER', '')
 
 
 def get_db() -> sqlite3.Connection:
@@ -61,6 +67,23 @@ def init_db() -> None:
 
 
 init_db()
+
+
+def send_sms_alert(message: str) -> None:
+    account_sid = app.config['TWILIO_ACCOUNT_SID']
+    auth_token = app.config['TWILIO_AUTH_TOKEN']
+    from_number = app.config['TWILIO_PHONE_NUMBER']
+    to_number = app.config['ALERT_PHONE_NUMBER']
+
+    if not all([account_sid, auth_token, from_number, to_number]):
+        raise RuntimeError('Missing Twilio environment variables.')
+
+    client = Client(account_sid, auth_token)
+    client.messages.create(
+        body=message,
+        from_=from_number,
+        to=to_number,
+    )
 
 
 def login_required(view_func):
@@ -106,6 +129,10 @@ def create_lead():
         flash('Name and phone are required.', 'error')
         return redirect(url_for('index'))
 
+    created_at = datetime.utcnow().isoformat(timespec='seconds') + 'Z'
+    source = request.form.get('source', 'website')
+    page_url = request.form.get('page_url', '/')
+
     db = get_db()
     db.execute(
         '''
@@ -113,18 +140,35 @@ def create_lead():
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
         (
-            datetime.utcnow().isoformat(timespec='seconds') + 'Z',
+            created_at,
             name,
             phone,
             city,
             service_type,
             urgency,
             details,
-            request.form.get('source', 'website'),
-            request.form.get('page_url', '/'),
+            source,
+            page_url,
         ),
     )
     db.commit()
+
+    sms_body = (
+        f"NEW HVAC LEAD\n"
+        f"Name: {name}\n"
+        f"Phone: {phone}\n"
+        f"City: {city or 'N/A'}\n"
+        f"Service: {service_type or 'N/A'}\n"
+        f"Urgency: {urgency or 'N/A'}\n"
+        f"Details: {details or 'N/A'}"
+    )
+
+    try:
+        send_sms_alert(sms_body)
+    except Exception as e:
+        # Keep saving leads even if texting fails
+        print(f"SMS send failed: {e}")
+
     return redirect(url_for('thank_you', name=name))
 
 
