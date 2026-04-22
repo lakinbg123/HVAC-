@@ -109,6 +109,8 @@ def index():
 
 @app.post('/lead')
 def create_lead():
+    print("CREATE_LEAD HIT")
+
     name = request.form.get('name', '').strip()
     phone = request.form.get('phone', '').strip()
     city = request.form.get('city', '').strip()
@@ -143,6 +145,7 @@ def create_lead():
         ),
     )
     db.commit()
+    print("LEAD SAVED TO DB")
 
     sms_body = (
         f"NEW HVAC LEAD 🚨\n\n"
@@ -156,9 +159,9 @@ def create_lead():
 
     try:
         send_sms_alert(sms_body)
-        print("SMS sent successfully")
+        print("SMS SENT SUCCESSFULLY")
     except Exception as e:
-        print(f"SMS send failed: {repr(e)}")
+        print(f"SMS SEND FAILED: {repr(e)}")
 
     return redirect(url_for('thank_you', name=name))
 
@@ -190,46 +193,4 @@ def admin_login():
     return render_template('admin_login.html')
 
 
-@app.route('/admin/dashboard')
-@login_required
-def admin_dashboard():
-    db = get_db()
-    leads = db.execute(
-        'SELECT * FROM leads ORDER BY datetime(created_at) DESC, id DESC LIMIT 200'
-    ).fetchall()
-    return render_template('admin_dashboard.html', leads=leads)
-
-
-@app.post('/admin/lead/<int:lead_id>/status')
-@login_required
-def update_status(lead_id: int):
-    new_status = request.form.get('status', 'new')
-    if new_status not in {'new', 'contacted', 'booked', 'closed'}:
-        abort(400)
-    db = get_db()
-    db.execute('UPDATE leads SET status = ? WHERE id = ?', (new_status, lead_id))
-    db.commit()
-    return redirect(url_for('admin_dashboard'))
-
-
-@app.route('/admin/export.csv')
-@login_required
-def export_csv():
-    db = get_db()
-    rows = db.execute('SELECT * FROM leads ORDER BY datetime(created_at) DESC, id DESC').fetchall()
-    with open(CSV_PATH, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['id', 'created_at', 'name', 'phone', 'city', 'service_type', 'urgency', 'details', 'source', 'page_url', 'status'])
-        for row in rows:
-            writer.writerow([row['id'], row['created_at'], row['name'], row['phone'], row['city'], row['service_type'], row['urgency'], row['details'], row['source'], row['page_url'], row['status']])
-    return send_file(CSV_PATH, as_attachment=True, download_name='leads.csv')
-
-
-@app.route('/admin/logout')
-def admin_logout():
-    session.clear()
-    return redirect(url_for('admin_login'))
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
+@app
