@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Privacy Policy | {{ business_name }}{% endblock %}
+{% block content %}
+<section class="simple-page">
+  <div class="container narrow card prose">
+    <h1>Privacy Policy</h1>
+    <p>We collect information you submit through this website, including your name, phone number, city, and service request details. We use that information to respond to your request, contact you about service, and improve our operations.</p>
+    <p>We do not sell your personal information. We may use service providers for hosting, analytics, call tracking, and communication tools.</p>
+    <p>If you want your information removed, contact us at <a href="tel:{{ phone_tel }}">{{ phone_display }}</a>.</p>
+  </div>
+</section>
+{% endblock %}
