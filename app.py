@@ -265,8 +265,3 @@ def export_csv():
 @app.route('/admin/logout')
 def admin_logout():
     session.clear()
-    return redirect(url_for('admin_login'))
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
